@@ -21,4 +21,4 @@
   :description "Openstack management scripts"
   :components
   ((:file "package")
-   (:file "networking" :depends-on "package")))
+   (:file "networking" :depends-on ("package"))))
