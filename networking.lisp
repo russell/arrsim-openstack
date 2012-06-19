@@ -24,24 +24,16 @@
 (defun vm-ips ()
   (apply #'concatenate 'list
          (loop
-           :for server :in (server-list :detail t)
+           :for server :in (list-servers :detail t)
            :when (assoc-default :addresses server)
              :collect (mapcar (lambda (l) (assoc-default :addr (cadr l))) (assoc-default :addresses server)))))
-
-;; (group protocol from-port to-port ip-range)
-(defun add-security-rule (&rest args)
-  (format t "add: ~A~%" args))
-
-;; (group protocol from-port to-port ip-range)
-(defun remove-security-rule (&rest args)
-  (format t "del: ~A~%" args))
 
 (defun calculate-rule-changes (&optional (group "development"))
   (flet ((make-cidr (ip)
            (concatenate 'string ip "/32")))
     (let* ((ips (mapcar #'make-cidr (vm-ips)))
            (changes (loop :for ip :in ips :collect (cons ip (list 'tcp 'udp))))
-           (security-group (security-group group)))
+           (security-group (get-security-group group)))
       (dolist (rule (cdr (assoc :rules security-group)))
         (let ((protocol (assoc-default :ip-protocol rule))
               (from-port (assoc-default :from-port rule))
@@ -50,7 +42,7 @@
           (when (and (equal from-port 1)
                      (equal to-port 65535)
                      (not (member ip-range ips :test #'string-equal)))
-            (security-rule-delete (assoc-default :id rule)))
+            (delete-security-rule (assoc-default :id rule)))
           (let ((change (assoc ip-range changes :test #'string-equal)))
             (when (and change
                        (equal from-port 1)
@@ -60,5 +52,5 @@
         (let ((ip (car rule))
               (protocols (cdr rule)))
           (dolist (protocol protocols)
-            (security-rule-create (string-downcase (symbol-name protocol))
+            (create-security-rule (string-downcase (symbol-name protocol))
                                   1 65535 ip (assoc-default :id security-group))))))))
